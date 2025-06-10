@@ -1,0 +1,16 @@
+{
+  "name": "user-info-manager",
+  "version": "1.0.0",
+  "description": "User management system with Firebase",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
