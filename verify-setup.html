@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firebase Setup Verification</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 15px; border-radius: 5px; margin: 10px 0; }
+        .error { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; padding: 15px; border-radius: 5px; margin: 10px 0; }
+        .info { background: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; padding: 15px; border-radius: 5px; margin: 10px 0; }
+        button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 5px; }
+        button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <h1>🔥 Firebase Configuration Verification</h1>
+    
+    <div id="status"></div>
+    
+    <button onclick="testConnection()">Test Firebase Connection</button>
+    <button onclick="addSampleUser()">Add Sample User</button>
+    <button onclick="viewAllUsers()">View All Users</button>
+    
+    <div id="output"></div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/11.9.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.9.0/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+
+    <script>
+        function showStatus(message, type) {
+            document.getElementById('status').innerHTML = `<div class="${type}">${message}</div>`;
+        }
+
+        function showOutput(message) {
+            document.getElementById('output').innerHTML += `<div class="info">${message}</div>`;
+        }
+
+        // Check initial status
+        window.addEventListener('load', () => {
+            if (isFirebaseEnabled) {
+                showStatus('✅ Firebase is connected and ready!', 'success');
+            } else {
+                showStatus('❌ Firebase connection failed. Check console for details.', 'error');
+            }
+        });
+
+        async function testConnection() {
+            showOutput('🔍 Testing Firebase connection...');
+            
+            if (!isFirebaseEnabled) {
+                showOutput('❌ Firebase not available');
+                return;
+            }
+
+            try {
+                // Try to write and read a test document
+                await db.collection('test').doc('connection').set({
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    test: true
+                });
+                
+                const doc = await db.collection('test').doc('connection').get();
+                if (doc.exists) {
+                    showOutput('✅ Connection test successful!');
+                    await db.collection('test').doc('connection').delete();
+                    showOutput('🧹 Test data cleaned up');
+                }
+            } catch (error) {
+                showOutput(`❌ Connection test failed: ${error.message}`);
+            }
+        }
+
+        async function addSampleUser() {
+            if (!isFirebaseEnabled) {
+                showOutput('❌ Firebase not available');
+                return;
+            }
+
+            try {
+                const sampleUser = {
+                    firstName: 'John',
+                    lastName: 'Doe',
+                    email: 'john.doe@example.com',
+                    phone: '555-0123',
+                    department: 'Engineering',
+                    position: 'Software Developer',
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+
+                const docRef = await db.collection('users').add(sampleUser);
+                showOutput(`✅ Sample user added with ID: ${docRef.id}`);
+            } catch (error) {
+                showOutput(`❌ Failed to add user: ${error.message}`);
+            }
+        }
+
+        async function viewAllUsers() {
+            if (!isFirebaseEnabled) {
+                showOutput('❌ Firebase not available');
+                return;
+            }
+
+            try {
+                const snapshot = await db.collection('users').get();
+                const userCount = snapshot.size;
+                
+                showOutput(`📊 Found ${userCount} users in Firestore`);
+                
+                if (userCount > 0) {
+                    let userList = '<h3>Users in Database:</h3><ul>';
+                    snapshot.forEach(doc => {
+                        const user = doc.data();
+                        userList += `<li>${user.firstName} ${user.lastName} (${user.email})</li>`;
+                    });
+                    userList += '</ul>';
+                    showOutput(userList);
+                }
+            } catch (error) {
+                showOutput(`❌ Failed to load users: ${error.message}`);
+            }
+        }
+    </script>
+</body>
+</html>
