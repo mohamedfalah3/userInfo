@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firebase Connection Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .success { background: rgba(76, 175, 80, 0.3); border-left: 4px solid #4caf50; }
+        .error { background: rgba(244, 67, 54, 0.3); border-left: 4px solid #f44336; }
+        .warning { background: rgba(255, 193, 7, 0.3); border-left: 4px solid #ffc107; }
+        .info { background: rgba(33, 150, 243, 0.3); border-left: 4px solid #2196f3; }
+        button {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 5px;
+            transition: transform 0.2s;
+        }
+        button:hover { transform: translateY(-2px); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .code {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            margin: 10px 0;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔥 Firebase Connection Test</h1>
+        <p>This page helps you verify your Firebase configuration and connection.</p>
+        
+        <div id="status-container">
+            <div class="info">
+                <strong>Instructions:</strong>
+                <ol>
+                    <li>Update <code>firebase-config.js</code> with your actual Firebase credentials</li>
+                    <li>Make sure Firestore is enabled in your Firebase project</li>
+                    <li>Click "Test Connection" below</li>
+                </ol>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin: 20px 0;">
+            <button onclick="testFirebaseConnection()">🔍 Test Connection</button>
+            <button onclick="addTestUser()" id="addUserBtn" disabled>👤 Add Test User</button>
+            <button onclick="viewUsers()" id="viewUsersBtn" disabled>📋 View All Users</button>
+            <button onclick="clearConsole()">🧹 Clear Console</button>
+        </div>
+
+        <div id="results"></div>
+
+        <h3>🖥️ Console Output:</h3>
+        <div id="console-output" class="code"></div>
+    </div>    <!-- Firebase SDKs v11.9.0 -->
+    <script src="https://www.gstatic.com/firebasejs/11.9.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.9.0/firebase-firestore-compat.js"></script>
+    
+    <!-- Firebase Configuration -->
+    <script src="firebase-config.js"></script>
+
+    <script>
+        // Capture console logs
+        const originalLog = console.log;
+        const originalWarn = console.warn;
+        const originalError = console.error;
+        
+        function addToConsole(message, type = 'log') {
+            const output = document.getElementById('console-output');
+            const timestamp = new Date().toLocaleTimeString();
+            const prefix = type === 'warn' ? '⚠️' : type === 'error' ? '❌' : 'ℹ️';
+            output.innerHTML += `[${timestamp}] ${prefix} ${message}\n`;
+            output.scrollTop = output.scrollHeight;
+        }
+
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addToConsole(args.join(' '), 'log');
+        };
+
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            addToConsole(args.join(' '), 'warn');
+        };
+
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addToConsole(args.join(' '), 'error');
+        };
+
+        function showStatus(message, type) {
+            const container = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `status ${type}`;
+            div.innerHTML = message;
+            container.appendChild(div);
+        }
+
+        function clearConsole() {
+            document.getElementById('console-output').innerHTML = '';
+            document.getElementById('results').innerHTML = '';
+        }
+
+        async function testFirebaseConnection() {
+            clearConsole();
+            console.log('🔍 Testing Firebase connection...');
+
+            if (!isFirebaseEnabled) {
+                showStatus('❌ Firebase is not enabled. Please check your configuration.', 'error');
+                return;
+            }
+
+            try {
+                // Test basic connection
+                const testDoc = await db.collection('test').doc('connection-test').set({
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    message: 'Connection test successful'
+                });
+                
+                console.log('✅ Write test successful');
+                
+                // Test read
+                const doc = await db.collection('test').doc('connection-test').get();
+                if (doc.exists) {
+                    console.log('✅ Read test successful');
+                    showStatus('🎉 Firebase connection is working perfectly!', 'success');
+                    
+                    // Enable other buttons
+                    document.getElementById('addUserBtn').disabled = false;
+                    document.getElementById('viewUsersBtn').disabled = false;
+                } else {
+                    throw new Error('Document was not found after writing');
+                }
+
+                // Clean up test document
+                await db.collection('test').doc('connection-test').delete();
+                console.log('🧹 Cleaned up test document');
+
+            } catch (error) {
+                console.error('❌ Firebase connection test failed:', error.message);
+                showStatus(`❌ Connection failed: ${error.message}`, 'error');
+                
+                if (error.code === 'permission-denied') {
+                    showStatus('💡 Tip: Make sure Firestore is in test mode or check your security rules', 'warning');
+                }
+            }
+        }
+
+        async function addTestUser() {
+            if (!isFirebaseEnabled) {
+                showStatus('❌ Firebase not available', 'error');
+                return;
+            }
+
+            try {
+                const testUser = {
+                    firstName: 'Test',
+                    lastName: 'User',
+                    email: 'test@example.com',
+                    phone: '123-456-7890',
+                    department: 'Testing',
+                    position: 'QA Engineer',
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+
+                const docRef = await db.collection('users').add(testUser);
+                console.log('✅ Test user added with ID:', docRef.id);
+                showStatus('✅ Test user added successfully!', 'success');
+            } catch (error) {
+                console.error('❌ Failed to add test user:', error.message);
+                showStatus(`❌ Failed to add test user: ${error.message}`, 'error');
+            }
+        }
+
+        async function viewUsers() {
+            if (!isFirebaseEnabled) {
+                showStatus('❌ Firebase not available', 'error');
+                return;
+            }
+
+            try {
+                const snapshot = await db.collection('users').get();
+                const users = [];
+                
+                snapshot.forEach(doc => {
+                    users.push({ id: doc.id, ...doc.data() });
+                });
+
+                console.log(`📋 Found ${users.length} users in database`);
+                
+                if (users.length > 0) {
+                    users.forEach((user, index) => {
+                        console.log(`${index + 1}. ${user.firstName} ${user.lastName} (${user.email})`);
+                    });
+                    showStatus(`📋 Found ${users.length} users in database (check console for details)`, 'success');
+                } else {
+                    showStatus('📭 No users found in database', 'info');
+                }
+            } catch (error) {
+                console.error('❌ Failed to load users:', error.message);
+                showStatus(`❌ Failed to load users: ${error.message}`, 'error');
+            }
+        }
+
+        // Initialize on page load
+        window.addEventListener('load', () => {
+            console.log('🚀 Firebase Test Page Loaded');
+            
+            if (isFirebaseEnabled) {
+                showStatus('✅ Firebase configuration loaded successfully', 'success');
+            } else {
+                showStatus('⚠️ Firebase not configured. Please update firebase-config.js', 'warning');
+            }
+        });
+    </script>
+</body>
+</html>
