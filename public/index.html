@@ -8,6 +8,9 @@
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+    
+    <!-- Authentication System -->
+    <script src="auth.js"></script>
 </head>
 <body>
     <!-- Mobile sidebar toggle button -->
@@ -86,12 +89,12 @@
                     <!-- Search and Filter -->
                     <div class="search-filter-container">
                         <div class="search-box">
-                            <input type="text" id="userSearch" placeholder="Search by name, email, or rank..." onkeyup="filterUsers()">
+                            <input type="text" id="userSearch" placeholder="Search by name, email, or rank...">
                             <i class="fas fa-search search-icon"></i>
                         </div>
                         <div class="filter-options">
                             <label for="rankFilter">Filter by Rank:</label>
-                            <select id="rankFilter" onchange="filterUsers()">
+                            <select id="rankFilter">
                                 <option value="all">All Ranks</option>
                                 <option value="technical">Soldiers</option>
                                 <option value="nonTechnical">Officers</option>
@@ -132,6 +135,12 @@
 
     <script src="firebase-config.js"></script>
     <script src="script.js"></script>
+    <script>
+        // Redirect to login if not authenticated
+        if (!sessionStorage.getItem('isLoggedIn')) {
+            window.location.href = 'login.html';
+        }
+    </script>
     <script>
         // Handle sidebar toggle for responsive design
         document.addEventListener('DOMContentLoaded', function() {

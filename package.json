@@ -1,14 +1,20 @@
 {
   "name": "user-info-manager",
   "version": "1.0.0",
-  "description": "User management system with Firebase",
-  "main": "server.js",
+  "description": "User management system with server-side authentication",
+  "main": "auth-server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js"
+    "start": "node auth-server.js",
+    "dev": "nodemon auth-server.js",
+    "old-server": "node server.js"
   },
   "dependencies": {
-    "express": "^4.18.2"
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "bcryptjs": "^2.4.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
   },
   "engines": {
     "node": ">=16.0.0"

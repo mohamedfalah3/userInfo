@@ -627,6 +627,21 @@ function resetForm() {
     submitBtn.innerHTML = '<i class="fas fa-save"></i> Save User';
 }
 
+function resetFormAndShowPopup() {
+    // Reset the form fields
+    const form = document.getElementById('userForm');
+    if (form) {
+        form.reset();
+    }
+    // Optionally reset suboccupation dropdown if present
+    const suboccupationContainer = document.getElementById('suboccupationContainer');
+    if (suboccupationContainer) {
+        suboccupationContainer.style.display = 'none';
+    }
+    // Show a popup/modal to confirm reset
+    alert('All fields have been cleared. You can now add a new user.');
+}
+
 function showSuccessModal() {
     const modal = document.getElementById('successModal');
     if (!modal) {
@@ -789,11 +804,11 @@ async function addTestUser() {
 
     // Utility functions
     function pad(n) { return n < 10 ? '0' + n : n; }
-    function formatDate(y, m, d) { return `${y}-${pad(m+1)}-${pad(d)}`; }
+    function formatDate(y, m, d) { return `${y}-${pad(m + 1)}-${pad(d)}`; }
     function parseDate(str) {
+        if (!str) return null;
         const [y, m, d] = str.split('-').map(Number);
-        if (!y || !m || !d) return null;
-        return new Date(y, m-1, d);
+        return new Date(y, m - 1, d);
     }
 
     // Calendar state
@@ -804,116 +819,70 @@ async function addTestUser() {
         const year = date.getFullYear();
         const month = date.getMonth();
         const today = new Date();
-        const selected = selectedDate;
-        // First day of month
-        const first = new Date(year, month, 1);
-        // Last day of month
-        const last = new Date(year, month+1, 0);
-        // Weekday of first day (0=Sun)
-        const startDay = first.getDay();
-        // Days in month
-        const daysInMonth = last.getDate();
-        // Weekday names
-        const weekdays = ['Su','Mo','Tu','We','Th','Fr','Sa'];
-        // Year and month dropdowns
-        let minYear = today.getFullYear() - 100;
-        let maxYear = today.getFullYear();
-        if (selected && selected.getFullYear() < minYear) minYear = selected.getFullYear();
-        if (selected && selected.getFullYear() > maxYear) maxYear = selected.getFullYear();
-        let yearOptions = '';
-        for (let y = maxYear; y >= minYear; y--) {
-            yearOptions += `<option value="${y}"${y===year?' selected':''}>${y}</option>`;
-        }
-        let monthOptions = '';
-        const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-        for (let m=0; m<12; m++) {
-            monthOptions += `<option value="${m}"${m===month?' selected':''}>${monthNames[m]}</option>`;
-        }
-        let html = `<div class="vanilla-date-picker-header">
-            <button type="button" id="prevMonthBtn">&#8592;</button>
-            <select id="yearSelect">${yearOptions}</select>
-            <select id="monthSelect">${monthOptions}</select>
-            <button type="button" id="nextMonthBtn">&#8594;</button>
-        </div>`;
-        html += '<div class="vanilla-date-picker-days">';
-        for (let wd of weekdays) html += `<div class="vanilla-date-picker-weekday">${wd}</div>`;
-        for (let i=0; i<startDay; i++) html += '<div></div>';
-        for (let d=1; d<=daysInMonth; d++) {
-            const thisDate = new Date(year, month, d);
-            let classes = 'vanilla-date-picker-day';
-            if (selected && thisDate.toDateString() === selected.toDateString()) classes += ' selected';
-            if (thisDate.toDateString() === today.toDateString()) classes += ' today';
-            html += `<div class="${classes}" data-date="${formatDate(year,month,d)}">${d}</div>`;
-        }
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const firstDay = new Date(year, month, 1).getDay();
+        let html = '<div class="date-picker-header">';
+        html += `<button class="date-picker-nav" id="prevMonth">&#8592;</button>`;
+        html += `<span class="date-picker-title">${year} - ${pad(month + 1)}</span>`;
+        html += `<button class="date-picker-nav" id="nextMonth">&#8594;</button>`;
         html += '</div>';
+        html += '<table><thead><tr>';
+        ['Su','Mo','Tu','We','Th','Fr','Sa'].forEach(d => html += `<th>${d}</th>`);
+        html += '</tr></thead><tbody><tr>';
+        let dayOfWeek = firstDay;
+        for (let i = 0; i < firstDay; i++) html += '<td></td>';
+        for (let d = 1; d <= daysInMonth; d++) {
+            if (dayOfWeek === 7) { html += '</tr><tr>'; dayOfWeek = 0; }
+            const isSelected = selectedDate && selectedDate.getFullYear() === year && selectedDate.getMonth() === month && selectedDate.getDate() === d;
+            html += `<td class="${isSelected ? 'selected' : ''}" data-date="${formatDate(year, month, d)}">${d}</td>`;
+            dayOfWeek++;
+        }
+        for (; dayOfWeek < 7; dayOfWeek++) html += '<td></td>';
+        html += '</tr></tbody></table>';
         calendar.innerHTML = html;
-        // Month navigation
-        calendar.querySelector('#prevMonthBtn').onclick = function(e) {
-            e.stopPropagation();
-            let newMonth = month-1;
-            let newYear = year;
-            if (newMonth < 0) { newMonth = 11; newYear--; }
-            viewDate = new Date(newYear, newMonth, 1);
-            renderCalendar(viewDate);
-        };
-        calendar.querySelector('#nextMonthBtn').onclick = function(e) {
-            e.stopPropagation();
-            let newMonth = month+1;
-            let newYear = year;
-            if (newMonth > 11) { newMonth = 0; newYear++; }
-            viewDate = new Date(newYear, newMonth, 1);
-            renderCalendar(viewDate);
-        };
-        // Year/month dropdowns
-        calendar.querySelector('#yearSelect').onchange = function(e) {
-            viewDate = new Date(Number(this.value), viewDate.getMonth(), 1);
-            renderCalendar(viewDate);
-        };
-        calendar.querySelector('#monthSelect').onchange = function(e) {
-            viewDate = new Date(viewDate.getFullYear(), Number(this.value), 1);
-            renderCalendar(viewDate);
-        };
-        // Date selection
-        calendar.querySelectorAll('.vanilla-date-picker-day').forEach(dayEl => {
-            dayEl.onclick = function(e) {
+        calendar.classList.add('open');
+        calendar.style.display = 'block'; // Ensure calendar is visible
+        document.getElementById('prevMonth').onclick = function(e) { e.stopPropagation(); viewDate = new Date(year, month - 1, 1); renderCalendar(viewDate); };
+        document.getElementById('nextMonth').onclick = function(e) { e.stopPropagation(); viewDate = new Date(year, month + 1, 1); renderCalendar(viewDate); };
+        calendar.querySelectorAll('td[data-date]').forEach(td => {
+            td.onclick = function(e) {
                 e.stopPropagation();
-                const val = this.getAttribute('data-date');
-                input.value = val;
-                selectedDate = parseDate(val);
-                hideCalendar();
+                input.value = td.getAttribute('data-date');
+                selectedDate = parseDate(input.value);
+                calendar.classList.remove('open');
+                calendar.style.display = 'none'; // Hide after selection
             };
         });
     }
-
     function showCalendar() {
-        calendar.style.display = 'block';
         renderCalendar(viewDate);
-        setTimeout(() => {
-            document.addEventListener('mousedown', onDocClick);
-        }, 0);
+        calendar.classList.add('open');
+        calendar.style.display = 'block';
     }
     function hideCalendar() {
+        calendar.classList.remove('open');
         calendar.style.display = 'none';
-        document.removeEventListener('mousedown', onDocClick);
     }
-    function onDocClick(e) {
+    icon.addEventListener('click', function(e) {
+        e.stopPropagation();
+        if (calendar.classList.contains('open')) {
+            hideCalendar();
+        } else {
+            showCalendar();
+        }
+    });
+    input.addEventListener('focus', showCalendar);
+    input.addEventListener('click', function(e) {
+        e.stopPropagation();
+        if (!calendar.classList.contains('open')) {
+            showCalendar();
+        }
+    });
+    document.addEventListener('click', function(e) {
         if (!calendar.contains(e.target) && e.target !== input && e.target !== icon) {
             hideCalendar();
         }
-    }
-    input.addEventListener('focus', showCalendar);
-    input.addEventListener('click', showCalendar);
-    icon.addEventListener('click', function(e) {
-        e.preventDefault();
-        showCalendar();
-        input.focus();
     });
-    // Keyboard navigation: close on Esc
-    input.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') hideCalendar();
-    });
-    // Prevent manual typing
-    input.addEventListener('keydown', function(e) { e.preventDefault(); });
 })();
 
 // Utility functions
@@ -1280,61 +1249,115 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Search and filter functionality
 function initSearchAndFilter() {
+    console.log('initSearchAndFilter called');
     // Check if search and filter elements exist (they only exist on index.html)
     const searchInput = document.getElementById('userSearch');
     const rankFilter = document.getElementById('rankFilter');
     
+    console.log('Search input element:', searchInput);
+    console.log('Rank filter element:', rankFilter);
+    
     if (searchInput && rankFilter) {
-        console.log('Search and filter initialized');
+        console.log('Search and filter elements found, adding event listeners');
+        
+        // Remove any existing event listeners first
+        searchInput.removeEventListener('keyup', filterUsers);
+        rankFilter.removeEventListener('change', filterUsers);
         
         // Add event listeners
-        searchInput.addEventListener('keyup', filterUsers);
-        rankFilter.addEventListener('change', filterUsers);
+        searchInput.addEventListener('keyup', function(e) {
+            console.log('Search input changed to:', e.target.value);
+            filterUsers();
+        });
+        rankFilter.addEventListener('change', function(e) {
+            console.log('Rank filter changed to:', e.target.value);
+            filterUsers();
+        });
+        
+        console.log('Search and filter initialized successfully');
+    } else {
+        console.log('Search and filter elements not found - this is normal for non-dashboard pages');
     }
 }
 
 function filterUsers() {
+    console.log('Filter users called');
     const searchInput = document.getElementById('userSearch');
     const rankFilter = document.getElementById('rankFilter');
-    const userRows = document.querySelectorAll('.user-table tbody tr');
+    const userRows = document.querySelectorAll('#userGrid .user-table tbody tr');
     
-    if (!searchInput || !rankFilter || !userRows.length) return;
+    console.log('Search input:', searchInput);
+    console.log('Rank filter:', rankFilter);
+    console.log('User rows found:', userRows.length);
+    
+    if (!searchInput || !rankFilter) {
+        console.log('Search input or rank filter not found');
+        return;
+    }
+    
+    if (!userRows.length) {
+        console.log('No user rows found');
+        return;
+    }
     
     const searchTerm = searchInput.value.toLowerCase().trim();
     const rankFilterValue = rankFilter.value;
-    
     let foundAnyMatch = false;
     
-    userRows.forEach(row => {
-        const userName = row.querySelector('.user-name-cell').textContent.toLowerCase();
-        const userEmail = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
-        const userOccupation = row.querySelector('td:nth-child(6)').textContent.toLowerCase();
-        
-        // Check if row matches search term
-        const matchesSearch = searchTerm === '' || 
-            userName.includes(searchTerm) || 
-            userEmail.includes(searchTerm) || 
-            userOccupation.includes(searchTerm);
-        
-        // Check if row matches rank filter
-        let matchesRank = true;
-        if (rankFilterValue !== 'all') {
-            if (rankFilterValue === 'technical') {
-                matchesRank = userOccupation.includes('soldier');
-            } else if (rankFilterValue === 'nonTechnical') {
-                matchesRank = userOccupation.includes('officer');
+    console.log('Search term:', searchTerm);
+    console.log('Rank filter value:', rankFilterValue);
+    
+    userRows.forEach((row, index) => {
+        try {
+            // Get text content from cells more safely
+            const nameCell = row.querySelector('.user-name-cell') || row.querySelector('td:nth-child(1)');
+            const emailCell = row.querySelector('td:nth-child(2)');
+            const occupationCell = row.querySelector('td:nth-child(6)');
+            
+            const userName = nameCell ? nameCell.textContent.toLowerCase() : '';
+            const userEmail = emailCell ? emailCell.textContent.toLowerCase() : '';
+            const userOccupation = occupationCell ? occupationCell.textContent.toLowerCase() : '';
+            
+            console.log(`Row ${index}: name="${userName}", email="${userEmail}", occupation="${userOccupation}"`);
+            console.log(`Search term: "${searchTerm}", Rank filter: "${rankFilterValue}"`);
+            
+            // Check if row matches search term
+            const matchesSearch = searchTerm === '' || 
+                userName.includes(searchTerm) || 
+                userEmail.includes(searchTerm) || 
+                userOccupation.includes(searchTerm);
+            
+            // Check if row matches rank filter
+            let matchesRank = true;
+            if (rankFilterValue !== 'all') {
+                if (rankFilterValue === 'technical') {
+                    // Match if the occupation text contains 'soldier' or starts with 'soldier'
+                    matchesRank = userOccupation.includes('soldier');
+                } else if (rankFilterValue === 'nonTechnical') {
+                    // Match if the occupation text contains 'officer' or starts with 'officer'
+                    matchesRank = userOccupation.includes('officer');
+                }
             }
-        }
-        
-        // Show or hide row based on filters
-        if (matchesSearch && matchesRank) {
-            row.classList.remove('filtered-out');
-            foundAnyMatch = true;
-        } else {
-            row.classList.add('filtered-out');
+            
+            console.log(`Row ${index}: matchesSearch=${matchesSearch}, matchesRank=${matchesRank}`);
+            
+            // Show or hide row based on filters
+            if (matchesSearch && matchesRank) {
+                row.classList.remove('filtered-out');
+                row.style.display = '';
+                foundAnyMatch = true;
+                console.log(`Row ${index}: SHOWING`);
+            } else {
+                row.classList.add('filtered-out');
+                row.style.display = 'none';
+                console.log(`Row ${index}: HIDING`);
+            }
+        } catch (error) {
+            console.error(`Error processing row ${index}:`, error);
         }
     });
     
+    console.log('Found any match:', foundAnyMatch);
     // Show or hide the "no results" message
     displayNoResultsMessage(!foundAnyMatch);
 }
@@ -1449,4 +1472,17 @@ async function addTestUser() {
         console.error('Error adding test user:', error);
         alert('Error adding test user: ' + error.message);
     }
+}
+
+// Attach to Add User button if on add-user.html
+if (window.location.pathname.includes('add-user.html')) {
+    document.addEventListener('DOMContentLoaded', function() {
+        const addUserBtn = document.querySelector('.btn.btn-primary[type="submit"]');
+        if (addUserBtn) {
+            addUserBtn.addEventListener('click', function(e) {
+                // Wait for form to actually submit and succeed, then reset
+                setTimeout(resetFormAndShowPopup, 300);
+            });
+        }
+    });
 }
