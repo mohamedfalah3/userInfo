@@ -144,6 +144,10 @@ const DataManager = {
 // Initialize page
 document.addEventListener('DOMContentLoaded', function() {
     console.log('[DEBUG] DOMContentLoaded event fired');
+    
+    // Initialize mobile enhancements first
+    initMobileEnhancements();
+    
     const currentPage = window.location.pathname.split('/').pop() || window.location.href.split('/').pop();
     console.log('[DEBUG] currentPage:', currentPage);
     console.log('[DEBUG] window.location.pathname:', window.location.pathname);
@@ -1486,3 +1490,282 @@ if (window.location.pathname.includes('add-user.html')) {
         }
     });
 }
+
+// === MOBILE SIDEBAR FUNCTIONALITY ===
+
+// Mobile sidebar toggle
+function initMobileSidebar() {
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    const sidebar = document.getElementById('sidebar');
+    const body = document.body;
+    
+    if (!sidebarToggle || !sidebar) {
+        console.log('Sidebar elements not found, skipping mobile sidebar init');
+        return;
+    }
+    
+    // Toggle sidebar on button click
+    sidebarToggle.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleSidebar();
+    });
+    
+    // Close sidebar when clicking outside on mobile
+    document.addEventListener('click', function(e) {
+        if (window.innerWidth <= 992) {
+            const isClickInSidebar = sidebar.contains(e.target);
+            const isClickOnToggle = sidebarToggle.contains(e.target);
+            
+            if (!isClickInSidebar && !isClickOnToggle && body.classList.contains('sidebar-open')) {
+                closeSidebar();
+            }
+        }
+    });
+    
+    // Handle window resize
+    window.addEventListener('resize', function() {
+        if (window.innerWidth > 992) {
+            // Desktop view - ensure sidebar is visible and remove mobile classes
+            sidebar.classList.remove('active');
+            body.classList.remove('sidebar-open');
+        }
+    });
+    
+    // Handle escape key to close sidebar
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && body.classList.contains('sidebar-open')) {
+            closeSidebar();
+        }
+    });
+    
+    // Prevent scrolling when sidebar is open on mobile
+    function preventScrolling(prevent) {
+        if (prevent) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+    }
+    
+    function toggleSidebar() {
+        const isOpen = body.classList.contains('sidebar-open');
+        if (isOpen) {
+            closeSidebar();
+        } else {
+            openSidebar();
+        }
+    }
+    
+    function openSidebar() {
+        sidebar.classList.add('active');
+        body.classList.add('sidebar-open');
+        sidebarToggle.setAttribute('aria-expanded', 'true');
+        
+        // Prevent body scrolling on mobile
+        if (window.innerWidth <= 992) {
+            preventScrolling(true);
+        }
+        
+        // Focus management for accessibility
+        const firstMenuItem = sidebar.querySelector('.sidebar-menu a');
+        if (firstMenuItem) {
+            setTimeout(() => firstMenuItem.focus(), 100);
+        }
+    }
+    
+    function closeSidebar() {
+        sidebar.classList.remove('active');
+        body.classList.remove('sidebar-open');
+        sidebarToggle.setAttribute('aria-expanded', 'false');
+        
+        // Restore body scrolling
+        preventScrolling(false);
+        
+        // Return focus to toggle button
+        sidebarToggle.focus();
+    }
+    
+    // Initialize ARIA attributes
+    sidebarToggle.setAttribute('aria-expanded', 'false');
+    sidebarToggle.setAttribute('aria-controls', 'sidebar');
+    sidebar.setAttribute('aria-hidden', 'false');
+    
+    console.log('Mobile sidebar initialized');
+}
+
+// === RESPONSIVE UTILITIES ===
+
+// Check if device is mobile/tablet
+function isMobileDevice() {
+    return window.innerWidth <= 992;
+}
+
+// Check if device is touch-enabled
+function isTouchDevice() {
+    return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+}
+
+// Optimize for touch devices
+function initTouchOptimizations() {
+    if (isTouchDevice()) {
+        document.body.classList.add('touch-device');
+        
+        // Add touch feedback for buttons
+        const buttons = document.querySelectorAll('.btn, .user-card, .stat-card');
+        buttons.forEach(button => {
+            button.addEventListener('touchstart', function() {
+                this.classList.add('touch-active');
+            });
+            
+            button.addEventListener('touchend', function() {
+                setTimeout(() => {
+                    this.classList.remove('touch-active');
+                }, 150);
+            });
+        });
+    }
+}
+
+// Handle viewport changes (important for mobile browsers with dynamic UI)
+function handleViewportChanges() {
+    let vh = window.innerHeight * 0.01;
+    document.documentElement.style.setProperty('--vh', `${vh}px`);
+    
+    window.addEventListener('resize', () => {
+        let vh = window.innerHeight * 0.01;
+        document.documentElement.style.setProperty('--vh', `${vh}px`);
+    });
+}
+
+// Enhanced date picker for mobile
+function initMobileDatePicker() {
+    if (!isMobileDevice()) return;
+    
+    const datePicker = document.getElementById('vanillaDatePicker');
+    const dateInput = document.getElementById('dateOfBirth');
+    
+    if (!datePicker || !dateInput) return;
+    
+    // Create overlay for mobile date picker
+    const overlay = document.createElement('div');
+    overlay.className = 'date-picker-overlay';
+    overlay.id = 'datePickerOverlay';
+    document.body.appendChild(overlay);
+    
+    // Show date picker with overlay on mobile
+    const originalShowDatePicker = window.showDatePicker;
+    window.showDatePicker = function() {
+        if (isMobileDevice()) {
+            overlay.classList.add('active');
+            datePicker.style.position = 'fixed';
+            datePicker.style.top = '50%';
+            datePicker.style.left = '50%';
+            datePicker.style.transform = 'translate(-50%, -50%)';
+            datePicker.style.zIndex = '1000';
+        }
+        if (originalShowDatePicker) {
+            originalShowDatePicker();
+        }
+    };
+    
+    // Hide date picker and overlay
+    const originalHideDatePicker = window.hideDatePicker;
+    window.hideDatePicker = function() {
+        if (isMobileDevice()) {
+            overlay.classList.remove('active');
+            datePicker.style.position = '';
+            datePicker.style.top = '';
+            datePicker.style.left = '';
+            datePicker.style.transform = '';
+            datePicker.style.zIndex = '';
+        }
+        if (originalHideDatePicker) {
+            originalHideDatePicker();
+        }
+    };
+    
+    // Close date picker when clicking overlay
+    overlay.addEventListener('click', function() {
+        if (window.hideDatePicker) {
+            window.hideDatePicker();
+        }
+    });
+}
+
+// Responsive table/grid improvements
+function initResponsiveElements() {
+    // Make search and filter more mobile-friendly
+    const searchInput = document.getElementById('userSearch');
+    if (searchInput && isMobileDevice()) {
+        searchInput.placeholder = 'Search users...';
+        searchInput.setAttribute('autocomplete', 'off');
+        searchInput.setAttribute('autocorrect', 'off');
+        searchInput.setAttribute('autocapitalize', 'off');
+        searchInput.setAttribute('spellcheck', 'false');
+    }
+    
+    // Optimize button groups for mobile
+    const buttonGroups = document.querySelectorAll('.btn-group');
+    buttonGroups.forEach(group => {
+        if (isMobileDevice()) {
+            // Add horizontal scroll indicators if needed
+            if (group.scrollWidth > group.clientWidth) {
+                group.classList.add('scrollable');
+            }
+        }
+    });
+}
+
+// Improved performance for mobile
+function initPerformanceOptimizations() {
+    // Debounce search on mobile for better performance
+    if (isMobileDevice()) {
+        const searchInput = document.getElementById('userSearch');
+        if (searchInput) {
+            let searchTimeout;
+            const originalInput = searchInput.oninput;
+            
+            searchInput.oninput = function(e) {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    if (originalInput) {
+                        originalInput.call(this, e);
+                    }
+                }, 300); // 300ms debounce
+            };
+        }
+    }
+    
+    // Lazy load user cards for better mobile performance
+    if (users.length > 20 && isMobileDevice()) {
+        console.log('Large user list detected on mobile, consider implementing lazy loading');
+    }
+}
+
+// === ENHANCED MOBILE INITIALIZATION ===
+
+// Mobile-specific initialization
+function initMobileEnhancements() {
+    console.log('Initializing mobile enhancements...');
+    
+    initMobileSidebar();
+    initTouchOptimizations();
+    handleViewportChanges();
+    initMobileDatePicker();
+    initResponsiveElements();
+    initPerformanceOptimizations();
+    
+    // Add mobile-specific CSS classes
+    if (isMobileDevice()) {
+        document.body.classList.add('mobile-device');
+    }
+    
+    if (isTouchDevice()) {
+        document.body.classList.add('touch-device');
+    }
+    
+    console.log('Mobile enhancements initialized');
+}
+
+// === EXISTING CODE CONTINUES... ===
