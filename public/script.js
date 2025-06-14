@@ -374,13 +374,23 @@ function calculateAge(dateOfBirth) {
 let userIdToDelete = null;
 
 function openDeleteModal(userId) {
+    console.log('openDeleteModal called with userId:', userId);
     userIdToDelete = userId;
     const modal = document.getElementById('deleteConfirmModal');
+    console.log('Modal element found:', !!modal);
     if (modal) {
         modal.style.display = 'flex'; // Show the modal overlay
-        modal.classList.add('active');
+        // Use setTimeout to ensure the display change takes effect before adding active class
+        setTimeout(() => {
+            modal.classList.add('active');
+        }, 10);
+        console.log('Modal should now be visible');
     } else {
         console.error('Delete confirmation modal not found!');
+        // Fallback to old-style confirm dialog if modal is missing
+        if (confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+            performDeleteUser(userId);
+        }
     }
 }
 
@@ -404,8 +414,8 @@ async function confirmActualDelete() {
         closeDeleteModal();
         return;
     }
-    // Call the original delete logic, but pass the stored userIdToDelete
-    await deleteUser(userIdToDelete);
+    // Call the DataManager delete function directly
+    await performDeleteUser(userIdToDelete);
     closeDeleteModal();
 }
 
@@ -434,8 +444,7 @@ async function performDeleteUser(userId) { // Renamed to avoid conflict if we ke
 }
 
 // This is the function that will be called by the modal's delete button
-// It's a wrapper around performDeleteUser to ensure userIdToDelete is used
-document.addEventListener('DOMContentLoaded', () => {
+function setupDeleteModal() {
     const confirmBtn = document.getElementById('confirmDeleteBtn');
     if (confirmBtn) {
         confirmBtn.onclick = async () => {
@@ -447,8 +456,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 closeDeleteModal();
             }
         };
+        console.log('Delete modal event listener set up successfully');
+    } else {
+        console.warn('confirmDeleteBtn not found - modal may not be available');
     }
-});
+}
 
 function editUser(userId) {
     // Store user ID for editing and redirect to add user page
@@ -467,8 +479,11 @@ function editUserById(element) {
 }
 
 function deleteUserById(element) {
+    console.log('deleteUserById called with element:', element);
     const userId = element.getAttribute('data-user-id');
+    console.log('Extracted userId:', userId);
     if (userId) {
+        console.log('Opening delete modal for user ID:', userId);
         openDeleteModal(userId); // Show modal instead of direct delete
     } else {
         console.error("No user ID found for delete operation");
@@ -1755,6 +1770,9 @@ function initMobileEnhancements() {
     initMobileDatePicker();
     initResponsiveElements();
     initPerformanceOptimizations();
+    
+    // Set up delete modal
+    setupDeleteModal();
     
     // Add mobile-specific CSS classes
     if (isMobileDevice()) {
