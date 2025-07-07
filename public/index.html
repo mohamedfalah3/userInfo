@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-    <meta name="theme-color" content="#355e3b">
+    <meta name="theme-color" content="#ff8811">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>User Info Dashboard</title>
@@ -47,8 +47,13 @@
         <!-- Main Content -->
         <main class="main-content">
             <header class="page-header">
-                <h1><i class="fas fa-tachometer-alt"></i> Dashboard</h1>
-                <p>Manage and view user information</p>
+                <div class="header-content">
+                    <h1><i class="fas fa-users"></i> User Information Management</h1>
+                    <div class="user-display"></div>
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/c/c0/Fixed_Emblem_of_the_Ministry_of_Peshmerga_Affairs.png" 
+                         alt="Ministry of Peshmerga Affairs" 
+                         class="ministry-logo">
+                </div>
             </header>
 
             <div class="content-area">
@@ -81,7 +86,7 @@
                             <button class="btn btn-secondary" onclick="refreshDashboard()">
                                 <i class="fas fa-sync"></i> Refresh
                             </button>
-                            <button class="btn btn-secondary" onclick="forceInitDashboard()" style="background: var(--officer-color);">
+                            <button class="btn btn-secondary" onclick="forceInitDashboard()">
                                 <i class="fas fa-bolt"></i> Force Load
                             </button>
                             <button class="btn btn-primary" onclick="location.href='add-user.html'">
